@@ -13,13 +13,13 @@ options(github_pat = NULL)
 # Install GenomicSEM without a GitHub token
 library(remotes)
 remotes::install_github("GenomicSEM/GenomicSEM", auth_token = NULL, upgrade = "never")
-remotes::install_github("josefin-werme/LAVA")
+# remotes::install_github("josefin-werme/LAVA")
 
 library(GenomicSEM)
 packageVersion("GenomicSEM")
 
-library(LAVA)
-packageVersion("LAVA")
+# library(LAVA)
+# packageVersion("LAVA")
 
 install.packages("RhpcBLASctl")
 library(RhpcBLASctl)
@@ -109,7 +109,7 @@ ldsc_rg_summary(ldsc_out)
 # Run 4 -> rg = 0.08258438, SE = 0.04301183, z = 1.920, p = 0.05485
 # Run 4 -> Change INFO cut-off from 0.75 to 0.90 
 
-# Run 5 -> rg = 0.08258438, SE = 0.04301183, z = 1.920, p = 0.05485
+# Run 5 -> rg = 0.08258438, SE = 0.04301183, z = 1.920, p = 0.05485, CI (95%) = -0.00171726 +/- 0.166886
 # Run 5 -> Back to Neff
 
 
@@ -285,3 +285,11 @@ if (nrow(valid) > 1L) {
 } else {
   message("Not enough valid loci (positive h2 & finite gcov under coverage rule) to compute a global rg.")
 }
+
+# GLOBAL GENOME-WIDE (AD & SZ)
+# rg = 0.02450611
+# SE = 0.03184796
+# z = 0.7694718
+# p = 0.4416133
+# CI (95%) = -0.0379159 +/- 0.08692812
+  
