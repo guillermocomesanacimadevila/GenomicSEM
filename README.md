@@ -4,8 +4,8 @@
 
 ## Manhattan plotting! 
 
-¨¨¨bash
-python manhattan.py \
+```bash
+python 03_manhattan.py \
   --trait1 "/Users/guillermocomesanacimadevila/Desktop/PhD/GenomicSEM/Part1/Data/AD/Kunkle_etal_2019_IGAP_Summary_statistics_published.prepared_for_plots.tsv" \
   --trait2 "/Users/guillermocomesanacimadevila/Desktop/PhD/GenomicSEM/Part1/Data/SZ/PGC3_SCZ_wave3.harmonised_to_AD.prepared_for_plots.tsv" \
   --out "/Users/guillermocomesanacimadevila/Desktop/two_trait_manhattan" \
@@ -13,4 +13,4 @@ python manhattan.py \
   --suggestive 1e-5 \
   --width 12 \
   --height 8
-  ¨¨¨
+```
