@@ -40,7 +40,7 @@ library(parallel)
 packageVersion("HDL")
 
 # You already did this earlier, but do it again to be explicit:
-setwd("/Users/guillermocomesanacimadevila/Desktop/PhD/Part1/Data")
+setwd("/Users/guillermocomesanacimadevila/Desktop/PhD/GenomicSEM/Part1/Data")
 
 # 1) Run munge (as you have)
 munged <- munge(
@@ -109,7 +109,7 @@ ldsc_rg_summary(ldsc_out)
 # Run 4 -> rg = 0.08258438, SE = 0.04301183, z = 1.920, p = 0.05485
 # Run 4 -> Change INFO cut-off from 0.75 to 0.90 
 
-# Run 5 -> rg = 0.08258438, SE = 0.04301183, z = 1.920, p = 0.05485
+# Run 5 -> rg = 0.08258438, SE = 0.04301183, z = 1.920, p = 0.05485, CI (95%) = -0.00171726 +/- 0.166886
 # Run 5 -> Back to Neff
 
 
@@ -285,3 +285,61 @@ if (nrow(valid) > 1L) {
 } else {
   message("Not enough valid loci (positive h2 & finite gcov under coverage rule) to compute a global rg.")
 }
+
+# GLOBAL GENOME-WIDE (AD & SZ)
+# rg = 0.02450611
+# SE = 0.03184796
+# z = 0.7694718
+# p = 0.4416133
+# CI (95%) = -0.0379159 +/- 0.08692812
+
+
+
+## Re-run LDSC without MHC complex - remove from both GWAS 
+# Drop that in py (already created: SZ/SZ.noMHC.ldsc.sumstats, AD/AD.noMHC.ldsc.sumstats)
+
+az_no_mhc <- "AD/AD.noMHC.ldsc.sumstats"  
+sz_no_mhc <- "SZ/SZ.noMHC.ldsc.sumstats"   
+
+munged_noMHC <- munge(
+  files       = c(sz_no_mhc, az_no_mhc),
+  hm3         = "/Users/guillermocomesanacimadevila/ldsc_ref/w_hm3.snplist",
+  trait.names = c("SCZ_noMHC","AD_noMHC"),
+  N           = c(171880, 57693),
+  info.filter = 0.9,
+  maf.filter  = 0.01
+)
+
+out_files_noMHC <- file.path(getwd(), c("SCZ_noMHC.sumstats.gz", "AD_noMHC.sumstats.gz"))
+print(out_files_noMHC)
+stopifnot(all(file.exists(out_files_noMHC)))
+
+ldsc_noMHC <- ldsc(
+  traits          = out_files_noMHC,
+  sample.prev     = c(0.5, 0.5),
+  population.prev = c(0.01, 0.05),
+  ld              = ld_path,
+  wld             = wld_path,
+  trait.names     = c("SCZ_noMHC","AD_noMHC")
+)
+
+ldsc_noMHC
+ldsc_rg_summary(ldsc_noMHC)
+
+write.csv(ldsc_noMHC$V, "ldsc_noMHC_V.csv", row.names = FALSE)
+write.csv(ldsc_noMHC$S, "ldsc_noMHC_S.csv", row.names = FALSE)
+write.csv(ldsc_noMHC$I, "ldsc_noMHC_I.csv", row.names = FALSE)
+write.csv(ldsc_noMHC$N, "ldsc_noMHC_N.csv", row.names = FALSE)
+write.csv(data.frame(m = ldsc_noMHC$m), "ldsc_noMHC_m.csv", row.names = FALSE)
+write.csv(ldsc_rg_summary(ldsc_noMHC), "ldsc_noMHC_rg_summary.csv", row.names = FALSE)
+
+# Output
+# Same results as LDSC with MHC
+# rg = 0.08258438
+# SE = 0.04301183
+# z = 1.920039
+# pval = 0.05485301
+# CI = -0.00171726 / 0.166886
+
+# NEXT UP - CHECK WHETHER SNP COUNTS == SAME (BOTH MODALITIES)
+# NEXT UP - CHECK WHETEHR FIRST LDSC RUN CONTAINS MHC REGION OR !=
