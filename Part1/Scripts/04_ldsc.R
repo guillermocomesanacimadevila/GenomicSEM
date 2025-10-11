@@ -39,10 +39,8 @@ library(data.table)
 library(parallel)
 packageVersion("HDL")
 
-# You already did this earlier, but do it again to be explicit:
 setwd("/Users/guillermocomesanacimadevila/Desktop/PhD/GenomicSEM/Part1/Data")
 
-# 1) Run munge (as you have)
 munged <- munge(
   files       = c("SZ/SZ.ldsc.sumstats", "AD/AD.ldsc.sumstats"),
   hm3         = "/Users/guillermocomesanacimadevila/ldsc_ref/w_hm3.snplist",
@@ -52,18 +50,14 @@ munged <- munge(
   maf.filter  = 0.01  
 )
 
-# 2) Construct absolute paths to the munged files (they’re saved in getwd())
 out_files <- file.path(getwd(), c("SCZ.sumstats.gz", "AD.sumstats.gz"))
-
-# 3) Sanity check they exist BEFORE calling ldsc()
 print(out_files)
 stopifnot(all(file.exists(out_files)))  # will error if not found
 
-# 4) Point to LD score resources
 ld_path  <- "/Users/guillermocomesanacimadevila/ldsc_ref/eur_w_ld_chr"
 wld_path <- ld_path
 
-# 5) Run LDSC
+# Run LDSC
 # sample.prev = cases / (cases + controls)
 ldsc_out <- ldsc(
   traits          = out_files,
@@ -76,7 +70,6 @@ ldsc_out <- ldsc(
 
 ldsc_out
 
-# Save these 
 write.csv(ldsc_out$V, "ldsc_V.csv", row.names = FALSE)
 write.csv(ldsc_out$S, "ldsc_S.csv", row.names = FALSE)
 write.csv(ldsc_out$I, "ldsc_I.csv", row.names = FALSE)
