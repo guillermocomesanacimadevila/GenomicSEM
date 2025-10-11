@@ -109,7 +109,7 @@ ldsc_rg_summary(ldsc_out)
 # ===================== # 
 # HDL-L -> recompute rg
 
-# 1. Set LD_file and bim file 
+# Set LD_file and bim file 
 LD.path <- "/Users/guillermocomesanacimadevila/LD_HDL_L/LD.path"
 bim.path <- "/Users/guillermocomesanacimadevila/LD_HDL_L/bimfile"
 stopifnot(file.exists(file.path(LD.path, "HDLL_LOC_snps.RData")))
@@ -172,7 +172,7 @@ locus_coverage <- function(chr, piece) {
   data.table(CHR = chr, piece = piece, n_ref = n_ref, cov_scz = cov_scz, cov_ad = cov_ad)
 }
 
-# 1) pre-compute coverage (sequential, with progress)
+# pre-compute coverage ------ PROGRESS BAR
 with_progress({
   p <- progressor(steps = nrow(NEWLOC))
   cov_list <- lapply(seq_len(nrow(NEWLOC)), function(i) {
@@ -183,7 +183,7 @@ with_progress({
 })
 cov_tab <- rbindlist(cov_list)
 
-# 2) pick loci by coverage
+# >90% coverage loci
 cov_min  <- 0.90
 idx_all  <- seq_len(nrow(NEWLOC))
 idx_keep <- idx_all[(cov_tab$cov_scz >= cov_min) & (cov_tab$cov_ad >= cov_min)]
@@ -191,7 +191,7 @@ if (length(idx_keep) == 0L) idx_keep <- idx_all
 message(sprintf("Loci kept by coverage ≥ %.0f%%: %d / %d",
                 100*cov_min, length(idx_keep), nrow(NEWLOC)))
 
-# 3) HDL-L runner
+# Run HDL-L
 runner <- function(chr, piece) {
   HDL.L(
     gwas1 = sz_gwas, gwas2 = ad_gwas,
@@ -202,7 +202,7 @@ runner <- function(chr, piece) {
   )
 }
 
-# 4) run HDL-L over kept loci (sequential, with progress)
+# run HDL-L over kept loci
 with_progress({
   p2 <- progressor(steps = length(idx_keep))
   res_list <- lapply(idx_keep, function(i) {
@@ -214,7 +214,7 @@ with_progress({
   assign("res_list", res_list, inherits = TRUE)
 })
 
-# 5) collect & merge with coverage
+# collect & merge with coverage
 ok <- vapply(res_list, function(x) !(inherits(x, "try-error") || is.null(x)), logical(1))
 if (!any(ok)) {
   dir.create("HDLL_out", showWarnings = FALSE)
@@ -231,13 +231,11 @@ if (all(c("CHR","piece") %in% names(res_join))) {
   setnames(res_join, c("CHR","piece"), c("chr","piece"))
 }
 
-# 6) save local results
 dir.create("HDLL_out", showWarnings = FALSE)
 fwrite(res_join, "HDLL_out/SCZ_AD.HDLL.local_rg.with_coverage.tsv", sep = "\t")
 saveRDS(res_join, "HDLL_out/SCZ_AD.HDLL.local_rg.with_coverage.rds")
 print(dim(res_join))
 
-# 7) global rg on valid, covered loci
 valid <- res_join[
   is.finite(Heritability_1) & is.finite(Heritability_2) & is.finite(Genetic_Covariance) &
     Heritability_1 > 0 & Heritability_2 > 0 &
