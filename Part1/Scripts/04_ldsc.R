@@ -30,7 +30,7 @@ library(progressr)
 handlers(global = TRUE)
 handlers("txtprogressbar")
 
-# HDL-L package - check for genetic correlation with this one vs LDSC
+# HDL-L package -> need to check for rg vs LDSC
 remotes::install_github("zhenin/HDL/HDL", dependencies = TRUE)
 
 library(HDL)
