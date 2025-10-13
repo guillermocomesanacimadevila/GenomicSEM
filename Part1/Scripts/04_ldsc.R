@@ -13,13 +13,9 @@ options(github_pat = NULL)
 # Install GenomicSEM without a GitHub token
 library(remotes)
 remotes::install_github("GenomicSEM/GenomicSEM", auth_token = NULL, upgrade = "never")
-remotes::install_github("josefin-werme/LAVA")
 
 library(GenomicSEM)
 packageVersion("GenomicSEM")
-
-library(LAVA)
-packageVersion("LAVA")
 
 install.packages("RhpcBLASctl")
 library(RhpcBLASctl)
@@ -30,7 +26,7 @@ library(progressr)
 handlers(global = TRUE)
 handlers("txtprogressbar")
 
-# HDL-L package -> need to check for rg vs LDSC
+# HDL-L package - check for genetic correlation with this one vs LDSC
 remotes::install_github("zhenin/HDL/HDL", dependencies = TRUE)
 
 library(HDL)
@@ -39,10 +35,12 @@ library(data.table)
 library(parallel)
 packageVersion("HDL")
 
+# You already did this earlier, but do it again to be explicit:
 setwd("/Users/guillermocomesanacimadevila/Desktop/PhD/GenomicSEM/Part1/Data")
 
+# 1) Run munge (as you have)
 munged <- munge(
-  files       = c("SZ/SZ.ldsc.sumstats", "AD/AD.ldsc.sumstats"),
+  files       = c("SZ/SZ/SZ.ldsc.sumstats", "AD/AD/AD.ldsc.sumstats"),
   hm3         = "/Users/guillermocomesanacimadevila/ldsc_ref/w_hm3.snplist",
   trait.names = c("SCZ","AD"),
   N           = c(171880, 57693),
@@ -50,14 +48,18 @@ munged <- munge(
   maf.filter  = 0.01  
 )
 
+# 2) Construct absolute paths to the munged files (they’re saved in getwd())
 out_files <- file.path(getwd(), c("SCZ.sumstats.gz", "AD.sumstats.gz"))
+
+# 3) Sanity check they exist BEFORE calling ldsc()
 print(out_files)
 stopifnot(all(file.exists(out_files)))  # will error if not found
 
+# 4) Point to LD score resources
 ld_path  <- "/Users/guillermocomesanacimadevila/ldsc_ref/eur_w_ld_chr"
 wld_path <- ld_path
 
-# Run LDSC
+# 5) Run LDSC
 # sample.prev = cases / (cases + controls)
 ldsc_out <- ldsc(
   traits          = out_files,
@@ -70,6 +72,7 @@ ldsc_out <- ldsc(
 
 ldsc_out
 
+# Save these 
 write.csv(ldsc_out$V, "ldsc_V.csv", row.names = FALSE)
 write.csv(ldsc_out$S, "ldsc_S.csv", row.names = FALSE)
 write.csv(ldsc_out$I, "ldsc_I.csv", row.names = FALSE)
@@ -109,7 +112,7 @@ ldsc_rg_summary(ldsc_out)
 # ===================== # 
 # HDL-L -> recompute rg
 
-# Set LD_file and bim file 
+# 1. Set LD_file and bim file 
 LD.path <- "/Users/guillermocomesanacimadevila/LD_HDL_L/LD.path"
 bim.path <- "/Users/guillermocomesanacimadevila/LD_HDL_L/bimfile"
 stopifnot(file.exists(file.path(LD.path, "HDLL_LOC_snps.RData")))
@@ -172,7 +175,7 @@ locus_coverage <- function(chr, piece) {
   data.table(CHR = chr, piece = piece, n_ref = n_ref, cov_scz = cov_scz, cov_ad = cov_ad)
 }
 
-# pre-compute coverage ------ PROGRESS BAR
+# 1) pre-compute coverage (sequential, with progress)
 with_progress({
   p <- progressor(steps = nrow(NEWLOC))
   cov_list <- lapply(seq_len(nrow(NEWLOC)), function(i) {
@@ -183,7 +186,7 @@ with_progress({
 })
 cov_tab <- rbindlist(cov_list)
 
-# >90% coverage loci
+# 2) pick loci by coverage
 cov_min  <- 0.90
 idx_all  <- seq_len(nrow(NEWLOC))
 idx_keep <- idx_all[(cov_tab$cov_scz >= cov_min) & (cov_tab$cov_ad >= cov_min)]
@@ -191,7 +194,7 @@ if (length(idx_keep) == 0L) idx_keep <- idx_all
 message(sprintf("Loci kept by coverage ≥ %.0f%%: %d / %d",
                 100*cov_min, length(idx_keep), nrow(NEWLOC)))
 
-# Run HDL-L
+# 3) HDL-L runner
 runner <- function(chr, piece) {
   HDL.L(
     gwas1 = sz_gwas, gwas2 = ad_gwas,
@@ -202,7 +205,7 @@ runner <- function(chr, piece) {
   )
 }
 
-# run HDL-L over kept loci
+# 4) run HDL-L over kept loci (sequential, with progress)
 with_progress({
   p2 <- progressor(steps = length(idx_keep))
   res_list <- lapply(idx_keep, function(i) {
@@ -214,7 +217,7 @@ with_progress({
   assign("res_list", res_list, inherits = TRUE)
 })
 
-# collect & merge with coverage
+# 5) collect & merge with coverage
 ok <- vapply(res_list, function(x) !(inherits(x, "try-error") || is.null(x)), logical(1))
 if (!any(ok)) {
   dir.create("HDLL_out", showWarnings = FALSE)
@@ -231,11 +234,13 @@ if (all(c("CHR","piece") %in% names(res_join))) {
   setnames(res_join, c("CHR","piece"), c("chr","piece"))
 }
 
+# 6) save local results
 dir.create("HDLL_out", showWarnings = FALSE)
 fwrite(res_join, "HDLL_out/SCZ_AD.HDLL.local_rg.with_coverage.tsv", sep = "\t")
 saveRDS(res_join, "HDLL_out/SCZ_AD.HDLL.local_rg.with_coverage.rds")
 print(dim(res_join))
 
+# 7) global rg on valid, covered loci
 valid <- res_join[
   is.finite(Heritability_1) & is.finite(Heritability_2) & is.finite(Genetic_Covariance) &
     Heritability_1 > 0 & Heritability_2 > 0 &
@@ -286,24 +291,36 @@ if (nrow(valid) > 1L) {
 
 
 
+
+
+
+
+
+# ========== no mhc ========== #
 ## Re-run LDSC without MHC complex - remove from both GWAS 
 # Drop that in py (already created: SZ/SZ.noMHC.ldsc.sumstats, AD/AD.noMHC.ldsc.sumstats)
 
-az_no_mhc <- "AD/AD.noMHC.ldsc.sumstats"  
-sz_no_mhc <- "SZ/SZ.noMHC.ldsc.sumstats"   
+sz_noMHC <- "SZ/SZ.ldsc.clean.noMHC.sumstats"
+ad_noMHC <- "AD/AD.ldsc.clean.noMHC.sumstats"
+stopifnot(file.exists(sz_noMHC), file.exists(ad_noMHC))
+
+count_rows <- function(path) data.table::fread(path, showProgress = FALSE)[, .N]
+n_in_sz <- count_rows(sz_noMHC)
+n_in_ad <- count_rows(ad_noMHC)
 
 munged_noMHC <- munge(
-  files       = c(sz_no_mhc, az_no_mhc),
+  files       = c(sz_noMHC, ad_noMHC),
   hm3         = "/Users/guillermocomesanacimadevila/ldsc_ref/w_hm3.snplist",
   trait.names = c("SCZ_noMHC","AD_noMHC"),
   N           = c(171880, 57693),
-  info.filter = 0.9,
+  info.filter = 0.90,
   maf.filter  = 0.01
 )
 
 out_files_noMHC <- file.path(getwd(), c("SCZ_noMHC.sumstats.gz", "AD_noMHC.sumstats.gz"))
-print(out_files_noMHC)
 stopifnot(all(file.exists(out_files_noMHC)))
+n_mg_sz <- count_rows(out_files_noMHC[1])
+n_mg_ad <- count_rows(out_files_noMHC[2])
 
 ldsc_noMHC <- ldsc(
   traits          = out_files_noMHC,
@@ -314,8 +331,10 @@ ldsc_noMHC <- ldsc(
   trait.names     = c("SCZ_noMHC","AD_noMHC")
 )
 
-ldsc_noMHC
-ldsc_rg_summary(ldsc_noMHC)
+print(ldsc_noMHC)
+print(ldsc_rg_summary(ldsc_noMHC))
+
+cat(sprintf("\nSNPs used by LDSC (m): %,d\n\n", ldsc_noMHC$m))
 
 write.csv(ldsc_noMHC$V, "ldsc_noMHC_V.csv", row.names = FALSE)
 write.csv(ldsc_noMHC$S, "ldsc_noMHC_S.csv", row.names = FALSE)
@@ -324,13 +343,68 @@ write.csv(ldsc_noMHC$N, "ldsc_noMHC_N.csv", row.names = FALSE)
 write.csv(data.frame(m = ldsc_noMHC$m), "ldsc_noMHC_m.csv", row.names = FALSE)
 write.csv(ldsc_rg_summary(ldsc_noMHC), "ldsc_noMHC_rg_summary.csv", row.names = FALSE)
 
-# Output
-# Same results as LDSC with MHC
-# rg = 0.08258438
-# SE = 0.04301183
-# z = 1.920039
-# pval = 0.05485301
-# CI = -0.00171726 / 0.166886
+counts_tbl <- data.frame(
+  Stage = c("Input_noMHC","Input_noMHC","PostMunge","PostMunge","LDSC_m"),
+  Trait = c("SCZ","AD","SCZ","AD","Both"),
+  SNPs  = c(n_in_sz, n_in_ad, n_mg_sz, n_mg_ad, ldsc_noMHC$m)
+)
+print(counts_tbl)
+write.csv(counts_tbl, "noMHC_snp_counts_summary.csv", row.names = FALSE)
 
-# NEXT UP - CHECK WHETHER SNP COUNTS == SAME (BOTH MODALITIES)
-# NEXT UP - CHECK WHETEHR FIRST LDSC RUN CONTAINS MHC REGION OR !=
+# ===== 
+# LDSC without chromosome 6 
+sz_noChr6 <- "SZ/SZ/SZ.ldsc.clean.noChr6.sumstats"
+ad_noChr6 <- "AD/AD/AD.ldsc.clean.noChr6.sumstats"
+stopifnot(file.exists(sz_noChr6), file.exists(ad_noChr6))
+
+n_in_sz <- count_rows(sz_noChr6)
+n_in_ad <- count_rows(ad_noChr6)
+
+munged_noChr6 <- munge(
+  files       = c(sz_noChr6, ad_noChr6),
+  hm3         = "/Users/guillermocomesanacimadevila/ldsc_ref/w_hm3.snplist",
+  trait.names = c("SCZ_noChr6","AD_noChr6"),
+  N           = c(171880, 57693),
+  info.filter = 0.90,
+  maf.filter  = 0.01
+)
+
+out_files_noChr6 <- file.path(getwd(), c("SCZ_noChr6.sumstats.gz", "AD_noChr6.sumstats.gz"))
+stopifnot(all(file.exists(out_files_noChr6)))
+n_mg_sz <- count_rows(out_files_noChr6[1])
+n_mg_ad <- count_rows(out_files_noChr6[2])
+
+cat("\n[noChr6 SNP counts]\n")
+cat(sprintf("SCZ: input = %s  -> post-munge = %s\n",
+            format(n_in_sz, big.mark=","), format(n_mg_sz, big.mark=",")))
+cat(sprintf("AD : input = %s  -> post-munge = %s\n\n",
+            format(n_in_ad, big.mark=","), format(n_mg_ad, big.mark=",")))
+
+ldsc_noChr6 <- ldsc(
+  traits          = out_files_noChr6,
+  sample.prev     = c(0.5, 0.5),
+  population.prev = c(0.01, 0.05),
+  ld              = ld_path,
+  wld             = wld_path,
+  trait.names     = c("SCZ_noChr6","AD_noChr6")
+)
+
+print(ldsc_noChr6)
+print(ldsc_rg_summary(ldsc_noChr6))
+
+cat(sprintf("\nSNPs used by LDSC (m): %s\n\n", format(ldsc_noChr6$m, big.mark=",")))
+
+write.csv(ldsc_noChr6$V, "ldsc_noChr6_V.csv", row.names = FALSE)
+write.csv(ldsc_noChr6$S, "ldsc_noChr6_S.csv", row.names = FALSE)
+write.csv(ldsc_noChr6$I, "ldsc_noChr6_I.csv", row.names = FALSE)
+write.csv(ldsc_noChr6$N, "ldsc_noChr6_N.csv", row.names = FALSE)
+write.csv(data.frame(m = ldsc_noChr6$m), "ldsc_noChr6_m.csv", row.names = FALSE)
+write.csv(ldsc_rg_summary(ldsc_noChr6), "ldsc_noChr6_rg_summary.csv", row.names = FALSE)
+
+counts_tbl <- data.frame(
+  Stage = c("Input_noChr6","Input_noChr6","PostMunge","PostMunge","LDSC_m"),
+  Trait = c("SCZ","AD","SCZ","AD","Both"),
+  SNPs  = c(n_in_sz, n_in_ad, n_mg_sz, n_mg_ad, ldsc_noChr6$m)
+)
+print(counts_tbl)
+write.csv(counts_tbl, "noChr6_snp_counts_summary.csv", row.names = FALSE)
