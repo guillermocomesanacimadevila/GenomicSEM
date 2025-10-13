@@ -45,6 +45,7 @@ def prepare_for_ldsc(path_in, path_out):
 
     keep_cols = required + [c for c in ["MAF", "INFO"] if c in df.columns]
     df = df[keep_cols].dropna(subset=required)
+    print(f"Number of SNPs after QC: {len(df):,}")
 
     df.to_csv(path_out, sep="\t", index=False, compression="infer")
 
@@ -59,19 +60,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
     n_to_neff()
     prepare_for_ldsc(args.infile, args.outfile)
-
-
-# Do we need Z? - NO NEED FOR THIS - GENOMICSEM PACKAGE TAKES CARE OF IT 
-# Variants per 1000 genomes with MAF > 0.01 - NO NEED FOR THIS - GENOMICSEM PACKAGE TAKES CARE OF IT 
-# Info < 0.75 on SZ dataset only - NO NEED FOR THIS - GENOMICSEM PACKAGE TAKES CARE OF IT 
-# Then harmonise the AD Kunkle samole size -> (N = 63,926) to effective N
-# 21,982 cases - AD GWAS
-# 41,944 controls - AD GWAS 
-# TOTAL -> 63,926
-
-
-# 74,776 cases - SZ GWAS 
-# 101,023 controls - SZ GWAS 
-
-# MAF < 0.01
-# INFO < 0.75
