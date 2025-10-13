@@ -14,3 +14,10 @@ python 03_manhattan.py \
   --width 12 \
   --height 8
 ```
+
+```bash
+Rscript ../Scripts/plots.R \
+  SZ/PGC3_SCZ_wave3.harmonised_to_AD.prepared_for_plots.tsv \
+  AD/Kunkle_etal_2019_IGAP_Summary_statistics_published.prepared_for_plots.tsv \
+  manhattan_full.pdf
+```
