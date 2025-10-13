@@ -38,7 +38,7 @@ def prepare_for_ldsc(path_in, path_out):
 
     if "INFO" in df.columns:
         df["INFO"] = pd.to_numeric(df["INFO"], errors="coerce")
-        df = df[df["INFO"] >= 0.75]
+        df = df[df["INFO"] >= 0.9]
 
     if "MAF" in df.columns:
         df = df[df["MAF"] >= 0.01]
