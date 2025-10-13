@@ -15,6 +15,23 @@ def _save_tsv(df, path_out):
     df.to_csv(path_out, sep="\t", index=False)
     print(f"Saved: {path_out} (n={len(df):,})")
 
+def rename_columns(df):
+    rename_map = {
+        "Effect": "A1",
+        "Non_Effect": "A2",
+        "EA": "A1",
+        "NEA": "A2",
+        "ALT": "A1",
+        "REF": "A2",
+        "Effect_allele_freq": "MAF",
+        "Freq1": "MAF",
+        "FREQ": "MAF",
+        "ImpInfo": "INFO",
+        "IMPINFO": "INFO"
+    }
+    df = df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns})
+    return df
+
 def basic_qc(df):
     df["A1"] = df["A1"].astype(str).str.upper()
     df["A2"] = df["A2"].astype(str).str.upper()
@@ -38,6 +55,7 @@ def strip_mhc_from_prepared(path_in, path_out=None,
                             chr_col="CHR", bp_col="BP",
                             chrom=MHC_CHR, start=MHC_START, end=MHC_END):
     df = _ensure_tabular_read(path_in)
+    df = rename_columns(df)
     cols = list(df.columns)
     if chr_col not in df.columns or bp_col not in df.columns:
         raise ValueError(f"{path_in}: missing '{chr_col}' and/or '{bp_col}' columns.")
@@ -55,7 +73,6 @@ def strip_mhc_from_prepared(path_in, path_out=None,
     df_out = df_out[cols]
     _save_tsv(df_out, path_out)
     print(f"Removed {before - after:,} SNP rows in chr{chrom}:{start:,}-{end:,} (MHC).")
-    print(f"Remaining SNPs after QC+MHC removal: {after:,}")
     print(f"FINAL SNP COUNT (QC + MHC removed): {after:,}\n")
     return path_out
 
@@ -64,6 +81,8 @@ def strip_mhc_from_ldsc(ldsc_path, prepared_path, path_out=None,
                         chrom=MHC_CHR, start=MHC_START, end=MHC_END):
     ldsc = _ensure_tabular_read(ldsc_path)
     prep = _ensure_tabular_read(prepared_path)
+    ldsc = rename_columns(ldsc)
+    prep = rename_columns(prep)
     ldsc = basic_qc(ldsc)
     if snp_col not in ldsc.columns:
         raise ValueError(f"{ldsc_path}: missing '{snp_col}' column.")
@@ -86,7 +105,6 @@ def strip_mhc_from_ldsc(ldsc_path, prepared_path, path_out=None,
         path_out = f"{base}.clean.noMHC{ext}"
     _save_tsv(ldsc_out, path_out)
     print(f"Removed {before - after:,} SNP rows by rsID match to MHC (chr{chrom}:{start:,}-{end:,}).")
-    print(f"Remaining SNPs after QC+MHC removal: {after:,}")
     print(f"FINAL SNP COUNT (QC + MHC removed): {after:,}\n")
     return path_out
 
