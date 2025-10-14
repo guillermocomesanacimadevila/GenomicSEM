@@ -147,12 +147,6 @@ res_test <- HDL.L(
 res_df <- as.data.frame(res_test)
 View(res_df)
 
-# rg: 0.1363 
-# CI: (-0.9602, 1)
-# P = 0.84
-
-
-
 ## ========== WHOLE GENOME NOW (no manual core settings) ========== #
 
 # ensure DT + numeric
@@ -282,20 +276,6 @@ if (nrow(valid) > 1L) {
   message("Not enough valid loci (positive h2 & finite gcov under coverage rule) to compute a global rg.")
 }
 
-# GLOBAL GENOME-WIDE (AD & SZ)
-# rg = 0.02450611
-# SE = 0.03184796
-# z = 0.7694718
-# p = 0.4416133
-# CI (95%) = -0.0379159 +/- 0.08692812
-
-
-
-
-
-
-
-
 # ========== no mhc ========== #
 ## Re-run LDSC without MHC complex - remove from both GWAS 
 # Drop that in py (already created: SZ/SZ.noMHC.ldsc.sumstats, AD/AD.noMHC.ldsc.sumstats)
@@ -408,3 +388,273 @@ counts_tbl <- data.frame(
 )
 print(counts_tbl)
 write.csv(counts_tbl, "noChr6_snp_counts_summary.csv", row.names = FALSE)
+
+
+# Run HDL-L with no-MHC
+# Prepare for HDL-L in .py
+sz_noMHC_hdl <- read.csv("SZ/SZ.hdl.sumstats", sep="\t")
+ad_noMHC_hdl <- read.csv("AD/AD.hdl.sumstats", sep="\t")
+print(dim(sz_noMHC_hdl))
+print(dim(ad_noMHC_hdl))
+
+stopifnot(all(c("SNP","A1","A2","N","Z") %in% names(sz_noMHC_hdl)))
+stopifnot(all(c("SNP","A1","A2","N","Z") %in% names(ad_noMHC_hdl)))
+sz_noMHC_hdl$N <- as.numeric(sz_noMHC_hdl$N);  sz_noMHC_hdl$Z <- as.numeric(sz_noMHC_hdl$Z)
+ad_noMHC_hdl$N <- as.numeric(ad_noMHC_hdl$N);  ad_noMHC_hdl$Z <- as.numeric(ad_noMHC_hdl$Z)
+
+chr_test_noMHC <- as.numeric(NEWLOC$CHR[1])
+piece_test_noMHC <- as.numeric(NEWLOC$piece[1])
+
+res_test_noMHC <- HDL.L(
+  gwas1=sz_noMHC_hdl, gwas2=ad_noMHC_hdl,
+  Trait1name="SCZ", Trait2name="AD",
+  LD.path=LD.path, bim.path=bim.path,
+  chr=chr_test_noMHC, piece=piece_test_noMHC,
+  eigen.cut=0.99, N0=0, lim=exp(-18), output.file=""
+)
+
+res_df_noMHC <- as.data.frame(res_test_noMHC)
+View(res_df_noMHC)
+
+setDT(sz_noMHC_hdl); setDT(ad_noMHC_hdl)
+sz_noMHC_hdl[, `:=`(N = as.numeric(N), Z = as.numeric(Z))]
+ad_noMHC_hdl[, `:=`(N = as.numeric(N), Z = as.numeric(Z))]
+
+setDT(NEWLOC)
+NEWLOC[, `:=`(CHR = as.integer(CHR), piece = as.integer(piece))]
+
+## ===== HDL-L (no-MHC): coverage -> per-locus -> aggregate -> global rg =====
+locus_coverage_noMHC <- function(chr, piece) {
+  bim_file <- file.path(bim.path, sprintf("ukb_chr%d.%d_n336000.imputed_clean.bim", chr, piece))
+  b <- data.table::fread(bim_file, header = FALSE, showProgress = FALSE)
+  data.table::setnames(b, c("CHR","SNP","CM","BP","A1","A2"))
+  n_ref   <- nrow(b)
+  cov_scz <- mean(b$SNP %chin% sz_noMHC_hdl$SNP)
+  cov_ad  <- mean(b$SNP %chin% ad_noMHC_hdl$SNP)
+  data.table(CHR = chr, piece = piece, n_ref = n_ref, cov_scz = cov_scz, cov_ad = cov_ad)
+}
+
+with_progress({
+  p <- progressor(steps = nrow(NEWLOC))
+  cov_list_noMHC <- lapply(seq_len(nrow(NEWLOC)), function(i) {
+    p(sprintf("coverage noMHC chr %d piece %d", NEWLOC$CHR[i], NEWLOC$piece[i]))
+    locus_coverage_noMHC(NEWLOC$CHR[i], NEWLOC$piece[i])
+  })
+})
+cov_tab_noMHC <- rbindlist(cov_list_noMHC)
+
+cov_min_noMHC <- 0.90
+idx_all  <- seq_len(nrow(NEWLOC))
+idx_keep <- idx_all[(cov_tab_noMHC$cov_scz >= cov_min_noMHC) & (cov_tab_noMHC$cov_ad >= cov_min_noMHC)]
+if (length(idx_keep) == 0L) idx_keep <- idx_all
+message(sprintf("[noMHC] Loci kept by coverage ≥ %.0f%%: %d / %d",
+                100*cov_min_noMHC, length(idx_keep), nrow(NEWLOC)))
+
+runner_noMHC <- function(chr, piece) {
+  HDL.L(
+    gwas1 = sz_noMHC_hdl, gwas2 = ad_noMHC_hdl,
+    Trait1name = "SCZ", Trait2name = "AD",
+    LD.path = LD.path, bim.path = bim.path,
+    chr = chr, piece = piece,
+    eigen.cut = 0.99, N0 = 0, lim = exp(-18), output.file = ""
+  )
+}
+
+with_progress({
+  p2 <- progressor(steps = length(idx_keep))
+  res_list_noMHC <- lapply(idx_keep, function(i) {
+    chr   <- NEWLOC$CHR[i]
+    piece <- NEWLOC$piece[i]
+    p2(sprintf("HDL-L noMHC chr %d piece %d", chr, piece))
+    try(runner_noMHC(chr, piece), silent = TRUE)
+  })
+})
+
+ok_noMHC <- vapply(res_list_noMHC, function(x) !(inherits(x, "try-error") || is.null(x)), logical(1))
+dir.create("HDLL_out_noMHC", showWarnings = FALSE)
+if (!any(ok_noMHC)) {
+  fwrite(cov_tab_noMHC, "HDLL_out_noMHC/SCZ_AD.noMHC.HDLL.coverage_only.tsv", sep = "\t")
+  stop("[noMHC] No loci returned valid HDL-L results. Wrote coverage table for debugging.")
+}
+res_local_noMHC <- rbindlist(res_list_noMHC[ok_noMHC], fill = TRUE)
+
+if (all(c("chr","piece") %in% names(res_local_noMHC))) {
+  setnames(res_local_noMHC, c("chr","piece"), c("CHR","piece"))
+}
+res_join_noMHC <- merge(res_local_noMHC, cov_tab_noMHC, by = c("CHR","piece"), all.x = TRUE)
+if (all(c("CHR","piece") %in% names(res_join_noMHC))) {
+  setnames(res_join_noMHC, c("CHR","piece"), c("chr","piece"))
+}
+
+fwrite(res_join_noMHC, "HDLL_out_noMHC/SCZ_AD.noMHC.HDLL.local_rg.with_coverage.tsv", sep = "\t")
+saveRDS(res_join_noMHC, "HDLL_out_noMHC/SCZ_AD.noMHC.HDLL.local_rg.with_coverage.rds")
+print(dim(res_join_noMHC))
+
+valid_noMHC <- res_join_noMHC[
+  is.finite(Heritability_1) & is.finite(Heritability_2) & is.finite(Genetic_Covariance) &
+    Heritability_1 > 0 & Heritability_2 > 0 &
+    cov_scz >= cov_min_noMHC & cov_ad >= cov_min_noMHC
+]
+
+if (nrow(valid_noMHC) > 1L) {
+  h1   <- valid_noMHC$Heritability_1
+  h2   <- valid_noMHC$Heritability_2
+  gcov <- valid_noMHC$Genetic_Covariance
+  
+  rg_hat <- sum(gcov) / sqrt(sum(h1) * sum(h2))
+  
+  theta_i <- sapply(seq_len(nrow(valid_noMHC)), function(i) {
+    h1_i   <- sum(h1) - h1[i]
+    h2_i   <- sum(h2) - h2[i]
+    gcov_i <- sum(gcov) - gcov[i]
+    if (h1_i <= 0 || h2_i <= 0) return(NA_real_)
+    gcov_i / sqrt(h1_i * h2_i)
+  })
+  theta_i <- theta_i[is.finite(theta_i)]
+  n <- length(theta_i)
+  theta_dot <- mean(theta_i)
+  se_jk <- sqrt(((n - 1) / n) * sum((theta_i - theta_dot)^2))
+  z <- rg_hat / se_jk
+  p <- 2 * pnorm(-abs(z))
+  ci_low  <- max(-1, rg_hat - 1.96 * se_jk)
+  ci_high <- min(1, rg_hat + 1.96 * se_jk)
+  
+  global_tab_noMHC <- data.table(
+    rg = rg_hat, SE = se_jk, z = z, p = p,
+    CI_low = ci_low, CI_high = ci_high,
+    n_loci_used = nrow(valid_noMHC),
+    cov_min_used = cov_min_noMHC
+  )
+  fwrite(global_tab_noMHC, "HDLL_out_noMHC/SCZ_AD.noMHC.HDLL.global_rg.tsv", sep = "\t")
+  saveRDS(global_tab_noMHC, "HDLL_out_noMHC/SCZ_AD.noMHC.HDLL.global_rg.rds")
+  print(global_tab_noMHC)
+} else {
+  message("[noMHC] Not enough valid loci (positive h2 & finite gcov under coverage rule) to compute a global rg.")
+}
+
+
+
+
+# ===== NOW WITHOUT CHROMOSOME 6 ===== #
+sz_nochr6_hdl <- read.csv("SZ/SZ.nochr6hdl.sumstats", sep="\t")
+ad_nochr6_hdl <- read.csv("AD/AD.nochr6hdl.sumstats", sep="\t")
+print(dim(sz_nochr6_hdl))
+print(dim(ad_nochr6_hdl))
+
+stopifnot(all(c("SNP","A1","A2","N","Z") %in% names(sz_nochr6_hdl)))
+stopifnot(all(c("SNP","A1","A2","N","Z") %in% names(ad_nochr6_hdl)))
+setDT(sz_nochr6_hdl); setDT(ad_nochr6_hdl)
+sz_nochr6_hdl[, `:=`(N = as.numeric(N), Z = as.numeric(Z))]
+ad_nochr6_hdl[, `:=`(N = as.numeric(N), Z = as.numeric(Z))]
+
+setDT(NEWLOC)
+NEWLOC[, `:=`(CHR = as.integer(CHR), piece = as.integer(piece))]
+NEWLOC_no6 <- NEWLOC[CHR != 6L]
+
+locus_coverage_noChr6 <- function(chr, piece) {
+  bim_file <- file.path(bim.path, sprintf("ukb_chr%d.%d_n336000.imputed_clean.bim", chr, piece))
+  b <- data.table::fread(bim_file, header = FALSE, showProgress = FALSE)
+  data.table::setnames(b, c("CHR","SNP","CM","BP","A1","A2"))
+  n_ref   <- nrow(b)
+  cov_scz <- mean(b$SNP %chin% sz_nochr6_hdl$SNP)
+  cov_ad  <- mean(b$SNP %chin% ad_nochr6_hdl$SNP)
+  data.table(CHR = chr, piece = piece, n_ref = n_ref, cov_scz = cov_scz, cov_ad = cov_ad)
+}
+
+with_progress({
+  p <- progressor(steps = nrow(NEWLOC_no6))
+  cov_list_noChr6 <- lapply(seq_len(nrow(NEWLOC_no6)), function(i) {
+    p(sprintf("coverage noChr6 chr %d piece %d", NEWLOC_no6$CHR[i], NEWLOC_no6$piece[i]))
+    locus_coverage_noChr6(NEWLOC_no6$CHR[i], NEWLOC_no6$piece[i])
+  })
+})
+
+cov_tab_noChr6 <- rbindlist(cov_list_noChr6)
+cov_min_noChr6 <- 0.90
+idx_all  <- seq_len(nrow(NEWLOC_no6))
+idx_keep <- idx_all[(cov_tab_noChr6$cov_scz >= cov_min_noChr6) & (cov_tab_noChr6$cov_ad >= cov_min_noChr6)]
+if (length(idx_keep) == 0L) idx_keep <- idx_all
+message(sprintf("[noChr6] Loci kept by coverage ≥ %.0f%%: %d / %d",
+                100*cov_min_noChr6, length(idx_keep), nrow(NEWLOC_no6)))
+
+runner_noChr6 <- function(chr, piece) {
+  HDL.L(
+    gwas1 = sz_nochr6_hdl, gwas2 = ad_nochr6_hdl,
+    Trait1name = "SCZ", Trait2name = "AD",
+    LD.path = LD.path, bim.path = bim.path,
+    chr = chr, piece = piece,
+    eigen.cut = 0.99, N0 = 0, lim = exp(-18), output.file = ""
+  )
+}
+
+with_progress({
+  p2 <- progressor(steps = length(idx_keep))
+  res_list_noChr6 <- lapply(idx_keep, function(i) {
+    chr   <- NEWLOC_no6$CHR[i]
+    piece <- NEWLOC_no6$piece[i]
+    p2(sprintf("HDL-L noChr6 chr %d piece %d", chr, piece))
+    try(runner_noChr6(chr, piece), silent = TRUE)
+  })
+})
+
+ok_noChr6 <- vapply(res_list_noChr6, function(x) !(inherits(x, "try-error") || is.null(x)), logical(1))
+dir.create("HDLL_out_noChr6", showWarnings = FALSE)
+if (!any(ok_noChr6)) {
+  fwrite(cov_tab_noChr6, "HDLL_out_noChr6/SCZ_AD.noChr6.HDLL.coverage_only.tsv", sep = "\t")
+  stop("[noChr6] No loci returned valid HDL-L results. Wrote coverage table for debugging.")
+}
+res_local_noChr6 <- rbindlist(res_list_noChr6[ok_noChr6], fill = TRUE)
+
+if (all(c("chr","piece") %in% names(res_local_noChr6))) {
+  setnames(res_local_noChr6, c("chr","piece"), c("CHR","piece"))
+}
+res_join_noChr6 <- merge(res_local_noChr6, cov_tab_noChr6, by = c("CHR","piece"), all.x = TRUE)
+if (all(c("CHR","piece") %in% names(res_join_noChr6))) {
+  setnames(res_join_noChr6, c("CHR","piece"), c("chr","piece"))
+}
+
+fwrite(res_join_noChr6, "HDLL_out_noChr6/SCZ_AD.noChr6.HDLL.local_rg.with_coverage.tsv", sep = "\t")
+saveRDS(res_join_noChr6, "HDLL_out_noChr6/SCZ_AD.noChr6.HDLL.local_rg.with_coverage.rds")
+print(dim(res_join_noChr6))
+
+valid_noChr6 <- res_join_noChr6[
+  is.finite(Heritability_1) & is.finite(Heritability_2) & is.finite(Genetic_Covariance) &
+    Heritability_1 > 0 & Heritability_2 > 0 &
+    cov_scz >= cov_min_noChr6 & cov_ad >= cov_min_noChr6
+]
+
+if (nrow(valid_noChr6) > 1L) {
+  h1   <- valid_noChr6$Heritability_1
+  h2   <- valid_noChr6$Heritability_2
+  gcov <- valid_noChr6$Genetic_Covariance
+  
+  rg_hat <- sum(gcov) / sqrt(sum(h1) * sum(h2))
+  
+  theta_i <- sapply(seq_len(nrow(valid_noChr6)), function(i) {
+    h1_i   <- sum(h1) - h1[i]
+    h2_i   <- sum(h2) - h2[i]
+    gcov_i <- sum(gcov) - gcov[i]
+    if (h1_i <= 0 || h2_i <= 0) return(NA_real_)
+    gcov_i / sqrt(h1_i * h2_i)
+  })
+  theta_i <- theta_i[is.finite(theta_i)]
+  n <- length(theta_i)
+  theta_dot <- mean(theta_i)
+  se_jk <- sqrt(((n - 1) / n) * sum((theta_i - theta_dot)^2))
+  z <- rg_hat / se_jk
+  p <- 2 * pnorm(-abs(z))
+  ci_low  <- max(-1, rg_hat - 1.96 * se_jk)
+  ci_high <- min(1, rg_hat + 1.96 * se_jk)
+  
+  global_tab_noChr6 <- data.table(
+    rg = rg_hat, SE = se_jk, z = z, p = p,
+    CI_low = ci_low, CI_high = ci_high,
+    n_loci_used = nrow(valid_noChr6),
+    cov_min_used = cov_min_noChr6
+  )
+  fwrite(global_tab_noChr6, "HDLL_out_noChr6/SCZ_AD.noChr6.HDLL.global_rg.tsv", sep = "\t")
+  saveRDS(global_tab_noChr6, "HDLL_out_noChr6/SCZ_AD.noChr6.HDLL.global_rg.rds")
+  print(global_tab_noChr6)
+} else {
+  message("[noChr6] Not enough valid loci (positive h2 & finite gcov under coverage rule) to compute a global rg.")
+}
