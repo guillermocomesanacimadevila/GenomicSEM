@@ -105,3 +105,69 @@ head SZ_magma.genes.out
 
 ### 6. Map gene number to gene NAME
 
+```bash
+python3 - <<'PY'
+import pandas as pd
+from pathlib import Path
+
+GENES = Path("/Users/c24102394/MAGMA/ref") # NCBI37.3.gene.loc
+OUT = Path("/Users/c24102394/Desktop/PhD/AD_SZ_genes/LAVA_LDSC_nature/outputs/lava/magma_runs") # AD_magma.genes.out / SZ_magma.genes.out
+
+gene_loc_df = pd.read_csv(GENES / "NCBI37.3.gene.loc",
+                          sep=r"\s+",
+                          header=None)
+
+ad_df = pd.read_csv(OUT / "AD_magma.genes.out",
+                    sep=r"\s+",
+                    header=0)
+
+sz_df = pd.read_csv(OUT / "SZ_magma.genes.out",
+                    sep=r"\s+",
+                    header=0)
+
+gene_loc_df.rename(columns={
+    0: "GENE",
+    1: "CHR",
+    2: "START",
+    3: "END",
+    4: "STRAND",
+    5: "GENE_ID"
+}, inplace=True)
+
+def add_gene_id(magma_df: pd.DataFrame, gene_loc_df: pd.DataFrame) -> pd.DataFrame:
+    magma_df = magma_df.copy()
+    gene_loc_df = gene_loc_df.copy()
+    magma_df["GENE"] = magma_df["GENE"].astype(int)
+    gene_loc_df["GENE"] = gene_loc_df["GENE"].astype(int)
+    merged = magma_df.merge(
+        gene_loc_df[["GENE", "GENE_ID"]],
+        on="GENE",
+        how="left"
+    )
+    return merged
+
+if __name__ == "__main__":
+    ad_df = add_gene_id(ad_df, gene_loc_df)
+    sz_df = add_gene_id(sz_df, gene_loc_df)
+    ad_df.to_csv(OUT / "AD_magma.genes.mapped.tsv", index=False, sep="\t")
+    sz_df.to_csv(OUT / "SZ_magma.genes.mapped.tsv", index=False, sep="\t")
+PY
+```
+
+```bash
+head AD_magma.genes.mapped.tsv
+head SZ_magma.genes.mapped.tsv
+```
+
+```bash
+# GENE	CHR	START	STOP	NSNPS	NPARAM	N	ZSTAT	P	GENE_ID
+# 148398	1	859993	879961	3	1	58546	0.54806	0.29183	SAMD11
+# 26155	1	879583	894679	8	3	58546	0.48183	0.31496	NOC2L
+# 84069	1	901872	910488	1	1	58546	0.44129	0.3295	PLEKHN1
+# 84808	1	910579	917473	1	1	58546	-0.0343	0.5137	PERM1
+# 9636	1	948847	949920	1	1	58546	-1.8145	0.9652	ISG15
+# 375790	1	955503	991499	9	3	58546	0.44975	0.32644	AGRN
+# 54991	1	1017198	1051736	14	4	58546	0.22966	0.40918	C1orf159
+# 254173	1	1109286	1133315	13	4	58546	1.8364	0.03315	TTLL10
+# 8784	1	1138888	1142163	4	2	58546	0.81201	0.20839	TNFRSF18
+```
