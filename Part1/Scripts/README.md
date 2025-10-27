@@ -17,3 +17,71 @@ MAGMA
     ├── README2
     └── REPORT
 ```
+
+
+### 1. Create MAGMA output dir
+
+```bash
+cd /Users/c24102394/Desktop/PhD/AD_SZ_genes/LAVA_LDSC_nature/outputs/lava
+mkdir -p magma_runs && cd magma_runs
+```
+
+
+### 2. Create genes_b37.genes.annot by mapping 1kG EUR SNPs to NCBI37.3 gene coordinates
+
+```bash
+# Make GRCh37 gene annotation
+magma --annotate \
+  --snp-loc /Users/c24102394/MAGMA/ref/g1000_eur.bim \
+  --gene-loc /Users/c24102394/MAGMA/ref/NCBI37.3.gene.loc \
+  --out genes_b37
+```
+
+
+### 3. Get per-trait p-vals
+
+```bash
+# Switch the files around for SCZ
+python3 - <<'PY'
+import gzip, math
+from math import erf, sqrt
+
+fin = gzip.open('/Users/c24102394/Desktop/PhD/AD_SZ_genes/LAVA_LDSC_nature/Data/AD.sumstats.gz','rt')
+fout = open('AD_for_magma.txt','w')
+
+header = next(fin)  # SNP  N  Z  A1  A2
+fout.write('SNP P N\n')
+
+for line in fin:
+    snp, N, Z, A1, A2 = line.split()
+    z = float(Z)
+    Phi = 0.5*(1.0 + erf(abs(z)/sqrt(2.0)))
+    p = 2.0*(1.0 - Phi)
+    fout.write(f"{snp} {p:.6g} {N}\n")
+
+fout.close()
+PY
+```
+
+
+### 4. Run gene analysis for trait 1 (Alzheimer´s Disease)
+
+```bash
+magma \
+  --bfile /Users/c24102394/MAGMA/ref/g1000_eur \
+  --pval AD_for_magma.txt use=SNP,P ncol=N \
+  --gene-annot genes_b37.genes.annot \
+  --out AD_magma
+```
+
+### 5. Run gene analysis for trait 1 (Schizophrenia)
+
+```bash
+magma \
+  --bfile /Users/c24102394/MAGMA/ref/g1000_eur \
+  --pval SZ_for_magma.txt use=SNP,P ncol=N \
+  --gene-annot genes_b37.genes.annot \
+  --out SZ_magma
+```
+
+
