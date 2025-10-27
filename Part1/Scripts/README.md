@@ -171,3 +171,6 @@ head SZ_magma.genes.mapped.tsv
 # 254173	1	1109286	1133315	13	4	58546	1.8364	0.03315	TTLL10
 # 8784	1	1138888	1142163	4	2	58546	0.81201	0.20839	TNFRSF18
 ```
+
+
+### 7. Calculate p-val per gene, per trait
