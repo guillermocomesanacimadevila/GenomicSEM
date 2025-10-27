@@ -1,5 +1,6 @@
 ## Run MAGMA on current data
 
+```bash
 MAGMA
 ├── CHANGELOG
 ├── magma
@@ -15,3 +16,4 @@ MAGMA
     ├── README
     ├── README2
     └── REPORT
+```
