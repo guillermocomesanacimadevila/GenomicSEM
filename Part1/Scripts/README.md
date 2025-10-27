@@ -87,8 +87,9 @@ magma \
 ```bash
 head AD_magma.genes.out
 head SZ_magma.genes.out
+```
 
--> OUT/
+```bash
 # GENE       CHR      START       STOP  NSNPS  NPARAM      N        ZSTAT            P
 # 148398       1     859993     879961      3       1  58546      0.54806      0.29183
 # 26155        1     879583     894679      8       3  58546      0.48183      0.31496
