@@ -74,7 +74,7 @@ magma \
   --out AD_magma
 ```
 
-### 5. Run gene analysis for trait 1 (Schizophrenia)
+### 5. Run gene analysis for trait 2 (Schizophrenia)
 
 ```bash
 magma \
@@ -84,4 +84,7 @@ magma \
   --out SZ_magma
 ```
 
-
+```bash
+head AD_magma.genes.out
+head SZ_magma.genes.out
+```
