@@ -38,7 +38,7 @@ magma --annotate \
 ```
 
 
-### 3. Recalculate (per-trait and per-SNP pvals)
+### 3. Re-calculate (per-trait and per-SNP pvals)
 
 ```bash
 # Switch the files around for SCZ
