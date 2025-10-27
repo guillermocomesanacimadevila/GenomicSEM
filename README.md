@@ -1,6 +1,8 @@
 # GenomicSEM
 
-<img width="3200" height="2000" alt="two_trait_manhattan" src="https://github.com/user-attachments/assets/e9d67798-0c08-4aea-a4f0-dcc53c3fe220" />
+<img width="3200" height="2000" alt="three_manhattan_rw" src="https://github.com/user-attachments/assets/465249c9-db1b-487b-b41c-d8b4d78cb03a" />
+
+
 
 ## Manhattan plotting! 
 
