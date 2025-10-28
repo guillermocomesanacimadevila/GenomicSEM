@@ -30,7 +30,7 @@ mkdir -p magma_runs && cd magma_runs
 ### 2. Create genes_b37.genes.annot by mapping 1kG EUR SNPs to NCBI37.3 gene coordinates
 
 ```bash
-# Make GRCh37 gene annotation
+# making GRCh37 gene annotation
 magma --annotate \
   --snp-loc /Users/c24102394/MAGMA/ref/g1000_eur.bim \
   --gene-loc /Users/c24102394/MAGMA/ref/NCBI37.3.gene.loc \
@@ -41,7 +41,7 @@ magma --annotate \
 ### 3. Re-calculate (per-trait and per-SNP pvals)
 
 ```bash
-# Switch the files around for SCZ
+# bloody need to switch the files around for SCZ
 python3 - <<'PY'
 import gzip, math
 from math import erf, sqrt
