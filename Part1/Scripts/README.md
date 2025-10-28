@@ -173,4 +173,79 @@ head SZ_magma.genes.mapped.tsv
 ```
 
 
-### 7. Calculate p-val per gene, per trait
+### 7. Reformat for genes of interest per phenotype
+
+```bash
+python3 - <<'PY'
+import pandas as pd
+from pathlib import Path
+
+OUT = Path("/Users/c24102394/Desktop/PhD/AD_SZ_genes/LAVA_LDSC_nature/outputs/lava/magma_runs")
+
+def get_exact_genes(lava_genes: pd.DataFrame, phenotype_genes: pd.DataFrame) -> pd.DataFrame:
+    phenotype_genes = phenotype_genes.copy()
+    lava_genes = lava_genes.copy()
+    lava_genes.loc[:, lava_genes.columns.isin(["symbol", "CHR", "start", "stop"])]
+    lava_genes.rename(columns={
+        "symbol": "GENE_ID",
+        "start": "START",
+        "stop": "STOP"},
+        inplace=True
+    )
+    merged = phenotype_genes.merge(
+        lava_genes,
+        on="GENE_ID",
+        how="inner"
+    )
+    merged.drop(
+        columns={
+            "CHR_y",
+            "START_y",
+            "STOP_y"
+        },
+        inplace=True
+    )
+    return merged
+
+def reformat_final_df(phenotype1: pd.DataFrame, phenotype2: pd.DataFrame, name1: str = "AD", name2: str = "SZ") -> pd.DataFrame:
+    phenotype1 = phenotype1.copy()
+    phenotype2 = phenotype2.copy()
+    cols_to_rename1 = {col: f"{col}_{name1}" for col in phenotype1.columns if col != "GENE_ID"}
+    cols_to_rename2 = {col: f"{col}_{name2}" for col in phenotype2.columns if col != "GENE_ID"}
+    phenotype1.rename(columns=cols_to_rename1, inplace=True)
+    phenotype2.rename(columns=cols_to_rename2, inplace=True)
+    merged = phenotype1.merge(phenotype2, on="GENE_ID", how="inner")
+    return merged
+
+if __name__ == "__main__":
+    genes_lava = pd.read_csv(
+        "/Users/c24102394/ref/magma/MAPPINGS/lava_gene_summary_with_names.csv",
+        sep=",",
+        index_col=0
+    )
+
+    genes_magma_ad = pd.read_csv(
+        "/Users/c24102394/Desktop/PhD/AD_SZ_genes/LAVA_LDSC_nature/outputs/lava/magma_runs/AD_magma.genes.mapped.tsv",
+        sep="\t",
+        index_col=0
+    )
+
+    genes_magma_sz = pd.read_csv(
+        "/Users/c24102394/Desktop/PhD/AD_SZ_genes/LAVA_LDSC_nature/outputs/lava/magma_runs/SZ_magma.genes.mapped.tsv",
+        sep="\t",
+        index_col=0
+    )
+
+    ad = get_exact_genes(genes_lava, genes_magma_ad)
+    sz = get_exact_genes(genes_lava, genes_magma_sz)
+    ad.to_csv(OUT / "AD_final_mapping.tsv", sep="\t", index=False)
+    sz.to_csv(OUT / "SZ_final_mapping.tsv", sep="\t", index=False)
+    combined = reformat_final_df(ad, sz, name1="AD", name2="SZ")
+    combined.to_csv(OUT / "AD_SZ_combined.tsv", sep="\t", index=False)
+    print("Combined AD+SZ mapping saved to:", OUT / "AD_SZ_combined.tsv")
+PY
+```
+
+
+
+
