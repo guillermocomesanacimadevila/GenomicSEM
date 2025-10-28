@@ -1,7 +1,7 @@
 ## Run MAGMA on current data
 
 ```bash
-MAGMA
+magma
 ├── CHANGELOG
 ├── magma
 ├── magma_v1.10_mac.zip
