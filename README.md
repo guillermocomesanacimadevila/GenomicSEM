@@ -39,3 +39,7 @@ python3 02_compute_neff.py \
   --cases 67390 \
   --controls 94015
 ```
+
+```bash
+nextflow run nextflow/qc.nf 
+```
