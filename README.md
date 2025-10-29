@@ -23,3 +23,19 @@ Rscript ../Scripts/plots.R \
   AD/Kunkle_etal_2019_IGAP_Summary_statistics_published.prepared_for_plots.tsv \
   manhattan_full.pdf
 ```
+
+```bash
+python3 02_compute_neff.py \
+  --in ../../Data/AD/post-qc/Kunkle_etal_2019_IGAP_Summary_statistics_published_ldsc_ready.tsv \
+  --out ../../Data/AD/post-qc/Kunkle_2019_IGAP.ldsc_ready_neff.tsv \
+  --cases 35274 \
+  --controls 59163
+```
+
+```bash
+python3 02_compute_neff.py \
+  --in ../../Data/SCZ/post-qc/PGC3_SCZ_wave3.cleaned_ldsc_ready.tsv \
+  --out ../../Data/SCZ/post-qc/PGC3_SCZ_wave3.ldsc_ready_neff.tsv \
+  --cases 67390 \
+  --controls 94015
+```
