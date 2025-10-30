@@ -15,7 +15,6 @@ in_files <- c(
   file.path(data_dir, "BIP/post-qc/bip2024_eur_no23andMe_ldsc_ready_neff.tsv")
 )
 
-# First AD-AGE
 trait_names <- c("AD", "BIP")
 N_vec <- c(AD=88394, BIP=492428)
 
