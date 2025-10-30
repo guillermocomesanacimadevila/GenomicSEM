@@ -2,7 +2,6 @@
 
 <img width="2800" height="1800" alt="three_manhattan" src="https://github.com/user-attachments/assets/d348c3b7-2de3-4f37-be75-2ceb3209ae8a" />
 
-
 ## Manhattan plotting! 
 
 ```bash
