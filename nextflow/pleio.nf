@@ -1,4 +1,4 @@
-#!/usr/bin/env nextflow
+#!usr/bin/env nextflow
 nextflow.enable.dsl=2
 
 params.data_dir = 'Data'
@@ -43,3 +43,4 @@ workflow {
     formatted = FormatGWAS()
     RunConjFDR(formatted)
 }
+
