@@ -106,12 +106,49 @@ process bip_neff {
   """
 }
 
+process long_qc {
+  tag 'long_qc'
+  output:
+    path "long_qc.done"
+  script:
+  """
+  set -e
+  WORKDIR=\$(pwd)
+  cd "${workflow.launchDir}"
+  python3 scr/qc/01c_exploratory_longevity.py \
+    --in Data/AGE/timmers2020_healthspan_lifespan_longevity.tsv \
+    --out Data/AGE/post-qc/AGE_ldsc_ready.tsv
+  echo "AGE QC done"
+  cd "\$WORKDIR"
+  touch long_qc.done
+  """
+}
+
+process long_neff {
+  tag 'long_neff'
+  input:
+    path long_done
+  script:
+  """
+  set -e
+  cd "${workflow.launchDir}"
+  python3 scr/qc/02_compute_neff.py \
+    --in Data/AGE/post-qc/AGE_ldsc_ready.tsv \
+    --out Data/AGE/post-qc/timmers2020_healthspan_lifespan_longevity_neff.tsv \
+    --cases 354854 \
+    --controls 354855
+  echo "LONG neff done"
+  """
+}
+
 workflow {
-  ad_done  = ad_qc()
-  sz_done  = sz_qc()
-  bip_done = bip_qc()
+  ad_done   = ad_qc()
+  sz_done   = sz_qc()
+  bip_done  = bip_qc()
+  long_done = long_qc()
 
   ad_neff(ad_done)
   scz_neff(sz_done)
   bip_neff(bip_done)
+  long_neff(long_done)
 }
