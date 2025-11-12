@@ -3,9 +3,14 @@
 suppressPackageStartupMessages({
   library(data.table)
   library(cfdr.pleio)
+  library(progress)
 })
 
 args <- commandArgs(trailingOnly = TRUE)
+if (length(args) < 2) {
+  stop("Usage: conjFDR.R <input_file> <out_prefix>")
+}
+
 infile <- args[1]
 out_prefix <- args[2]
 
