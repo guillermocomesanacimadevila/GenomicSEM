@@ -2,9 +2,9 @@
 nextflow.enable.dsl=2
 
 params.data_dir = 'Data'
-params.rbin     = 'Rscript'
-params.pybin    = 'python3'
-params.ref_dir  = '/Users/c24102394/ref/ldsc/1000G_EUR_Phase3_plink'
+params.rbin = 'Rscript'
+params.pybin = 'python3'
+params.ref_dir = '/Users/c24102394/ref/ldsc/1000G_EUR_Phase3_plink'
 
 process FormatGWAS_AD_SCZ {
     publishDir "${workflow.launchDir}/outputs/conjFDR", mode: 'copy'
@@ -144,6 +144,45 @@ process MapHits {
     """
 }
 
+process MapConjAnnotations {
+    script:
+    """
+    set -euo pipefail
+    mkdir -p ${workflow.launchDir}/outputs/conjFDR/hits
+    mkdir -p ${workflow.launchDir}/outputs/conjFDR/mapped
+    mkdir -p ${workflow.launchDir}/outputs/conjFDR/hits/shared
+    ${params.pybin} ${workflow.launchDir}/scr/conjFDR/map_conjfdr_annotations.py
+    """
+}
+
+process SharedHits {
+    script:
+    """
+    set -euo pipefail
+    ${params.pybin} ${workflow.launchDir}/scr/conjFDR/shared_hits.py
+    """
+}
+
+process AddGWASP {
+    script:
+    """
+    set -euo pipefail
+    ${params.pybin} ${workflow.launchDir}/scr/LD4Hits/map_original_pval.py ${workflow.launchDir}/outputs/conjFDR/hits/AD_SCZ_cfdr_results_mapped.tsv
+    ${params.pybin} ${workflow.launchDir}/scr/LD4Hits/map_original_pval.py ${workflow.launchDir}/outputs/conjFDR/hits/AD_LONG_cfdr_results_mapped.tsv
+    ${params.pybin} ${workflow.launchDir}/scr/LD4Hits/map_original_pval.py ${workflow.launchDir}/outputs/conjFDR/hits/SCZ_LONG_cfdr_results_mapped.tsv
+    ${params.pybin} ${workflow.launchDir}/scr/LD4Hits/map_original_pval.py ${workflow.launchDir}/outputs/conjFDR/hits/shared/AD_SCZ_shared_conjFDR0.05.tsv
+    ${params.pybin} ${workflow.launchDir}/scr/LD4Hits/map_original_pval.py ${workflow.launchDir}/outputs/conjFDR/hits/shared/AD_LONG_SCZ_LONG_shared_conjFDR0.05.tsv
+    """
+}
+
+process PrintSummary {
+    script:
+    """
+    set -euo pipefail
+    ${params.pybin} ${workflow.launchDir}/scr/print_summary.py
+    """
+}
+
 workflow {
     ad_scz_ch = FormatGWAS_AD_SCZ()
     ad_long_ch = FormatGWAS_AD_LONG()
@@ -158,14 +197,11 @@ workflow {
     scz_long_hits_ch = scz_long_conj_ch.filter { it.name == "SCZ_LONG_shared_hits.tsv" }
 
     MapHits(ad_scz_hits_ch, ad_long_hits_ch, scz_long_hits_ch)
+    MapConjAnnotations()
+    SharedHits()
+    AddGWASP()
+    PrintSummary()
 }
 
 // Rscript /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/scr/conjFDR/conjFDR.R data/AD_LONG.harmonised_AD_SCZ.tsv AD_LONG
 // Rscript /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/scr/conjFDR/conjFDR.R data/SCZ_LONG.harmonised_AD_SCZ.tsv SCZ_LONG
-
-// python map_hits.py \
-//   --ref-dir /Users/c24102394/ref/ldsc/1000G_EUR_Phase3_plink \
-//   --out-dir /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/outputs/conjFDR/mapped \
-//   /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/outputs/conjFDR/AD_SCZ_shared_hits.tsv \
-//   /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/outputs/conjFDR/AD_LONG_shared_hits.tsv \
-//   /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/outputs/conjFDR/SCZ_LONG_shared_hits.tsv
