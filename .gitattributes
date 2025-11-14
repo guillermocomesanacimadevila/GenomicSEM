@@ -1,1 +1,9 @@
+*.nf linguist-language=Nextflow
+*.nf linguist-detectable=true
+
+*.py linguist-vendored
 *.ipynb linguist-language=Python
+*.ipynb linguist-vendored
+
+tests/* linguist-vendored
+scripts/* linguist-vendored
