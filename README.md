@@ -52,3 +52,21 @@ cd GenomicSEM
 ```bash
 nextflow run nextflow/main.nf 
 ```
+
+## Run MR!
+
+```bash
+nextflow mr.nf --ld_token 'LDLINK_TOKEN'
+```
+
+```bash
+Rscript run-mr.R \
+  /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/Data/AD/post-qc/Kunkle_2019_IGAP.ldsc_ready_neff.tsv \
+  /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/Data/SCZ/post-qc/PGC3_SCZ_wave3.ldsc_ready_neff.tsv \
+  AD \
+  SCZ \
+  5e-8 \
+  "LDLINK_TOKEN" \
+  confounders_ad_scz.txt
+```
+
