@@ -32,5 +32,5 @@ workflow {
     RunMR4_AD_SCZ()
 }
 
-// nextflow run your_mr_pipeline.nf \
+// nextflow run mr.nf \
 //   --ld_token 'LDLINK_TOKEN'
