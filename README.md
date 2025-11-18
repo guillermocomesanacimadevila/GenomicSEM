@@ -53,10 +53,10 @@ cd GenomicSEM
 nextflow run nextflow/main.nf 
 ```
 
-## Run MR!
+## Run MR! - You must have an embedded OpenGWAS token in your Renv
 
 ```bash
-nextflow mr.nf --ld_token 'LDLINK_TOKEN'
+nextflow mr.nf --ld_token 
 ```
 
 ```bash
