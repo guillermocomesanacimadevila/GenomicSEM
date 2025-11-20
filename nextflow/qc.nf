@@ -141,14 +141,51 @@ process long_neff {
   """
 }
 
+process smoking_qc {
+  tag 'smoking_qc'
+  output:
+    path "smoking_qc.done"
+  script:
+  """
+  set -e
+  WORKDIR=\$(pwd)
+  cd "${workflow.launchDir}"
+  python3 scr/qc/01e_exploratory_smoking.py \
+    --in Data/SMOKING/ieu-a-964.vcf \
+    --out Data/SMOKING/post-qc/SMK_ldsc_ready.tsv
+  echo "SMOKING QC done"
+  cd "\$WORKDIR"
+  touch smoking_qc.done
+  """
+}
+
+process smoking_neff { // Neff = N -> 47,961
+  tag 'smoking_neff'
+  input:
+    path smoking_neff
+  script:
+  """
+  set -e
+  cd "${workflow.launchDir}"
+  python3 scr/qc/02_compute_neff.py \
+    --in Data/SMOKING/post-qc/SMK_ldsc_ready.tsv \
+    --out Data/SMOKING/post-qc/SMK_neff.tsv \
+    --cases 23981 \
+    --controls 23980
+  echo "SMK neff done"
+  """
+}
+
 workflow {
-  ad_done   = ad_qc()
-  sz_done   = sz_qc()
-  bip_done  = bip_qc()
+  ad_done = ad_qc()
+  sz_done = sz_qc()
+  bip_done = bip_qc()
   long_done = long_qc()
+  smoking_done = smoking_qc()
 
   ad_neff(ad_done)
   scz_neff(sz_done)
   bip_neff(bip_done)
   long_neff(long_done)
+  smoking_neff(smoking_done)
 }
