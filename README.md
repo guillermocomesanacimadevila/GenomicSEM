@@ -61,10 +61,10 @@ nextflow mr.nf --ld_token
 
 ```bash
 Rscript mr-pipeline.R \
-  /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/Data/AD/post-qc/Kunkle_2019_IGAP.ldsc_ready_neff.tsv \
   /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/Data/SCZ/post-qc/PGC3_SCZ_wave3.ldsc_ready_neff.tsv \
-  AD \
+  /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/Data/AGE/post-qc/timmers2020_healthspan_lifespan_longevity_neff.tsv \
   SCZ \
+  LON \
   5e-8 \
   "NA" \
   /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/Data/MR/confounders_ad_scz.txt
