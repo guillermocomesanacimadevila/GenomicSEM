@@ -66,7 +66,6 @@ Rscript mr-pipeline.R \
   SCZ \
   LON \
   5e-8 \
-  "NA" \
-  /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/Data/MR/confounders_ad_scz.txt
+  "NA"
 ```
 
