@@ -53,6 +53,41 @@ cd GenomicSEM
 nextflow run nextflow/main.nf 
 ```
 
+## Run GWAS-to-GWAS coloc!
+
+```bash
+Rscript coloc.R \
+  AD_SCZ \
+  AD \
+  SCZ \
+  /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/Data/loci_sumstats \
+  /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/outputs/coloc/AD_SCZ \
+  cc cc \
+  0.34 0.38
+```
+```bash
+Rscript coloc.R \
+  AD_LONG_SCZ_LONG \
+  AD \
+  LONG \
+  /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/Data/loci_sumstats \
+  /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/outputs/coloc/AD_LONG \
+  cc quant \
+  0.34 0
+```
+
+```bash
+Rscript coloc.R \
+  AD_LONG_SCZ_LONG \
+  SCZ \
+  LONG \
+  /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/Data/loci_sumstats \
+  /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/outputs/coloc/SCZ_LONG \
+  cc quant \
+  0.38 0
+```
+
+
 ## Run MR! - You must have an embedded OpenGWAS token in your Renv
 
 ```bash
@@ -68,4 +103,7 @@ Rscript mr-pipeline.R \
   5e-8 \
   "NA"
 ```
+
+
+
 
