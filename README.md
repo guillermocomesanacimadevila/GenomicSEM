@@ -73,7 +73,7 @@ Rscript coloc.R \
   /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/Data/loci_sumstats \
   /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/outputs/coloc/AD_LONG \
   cc quant \
-  0.34 0
+  0.34
 ```
 
 ```bash
@@ -84,7 +84,7 @@ Rscript coloc.R \
   /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/Data/loci_sumstats \
   /Users/c24102394/Desktop/PhD/AD_SCZ_AGE/outputs/coloc/SCZ_LONG \
   cc quant \
-  0.38 0
+  0.38
 ```
 
 
