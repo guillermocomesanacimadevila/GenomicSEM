@@ -1,8 +1,4 @@
-# Shared Genetic Components (AD -> SCZ -> BIP)
-
-<img width="2800" height="1800" alt="manhattan_balanced_colour_realdata" src="https://github.com/user-attachments/assets/82a652ad-b1b5-43ce-9464-5ca81539f4c5" />
-
-
+# Shared Genetic Components (AD -> SCZ)
 
 ## Manhattan plotting! 
 
