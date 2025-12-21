@@ -1,56 +1,110 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-command -v magma >/dev/null 2>&1 || {
-  echo "ERROR: MAGMA is not installed"
+# chmod +x magma.sh && ./src/magma/magma.sh \
+  #  /outputs/magma/AD/MAGMA \
+  #  /Users/c24102394/MAGMA/ref/g1000_eur \
+  #  /Users/c24102394/MAGMA/ref/g1000_eur.bim \
+  #  /Users/c24102394/MAGMA/ref/NCBI37.3.gene.loc \
+  #  AD \
+  #  /data/Main/AD/post-ldsc/AD.sumstats.gz
+
+if [[ $# -ne 6 ]]; then
+  echo "Usage: $0 OUT_DIR BFILE_PREFIX SNP_LOC GENE_LOC TRAIT_NAME SUMSTATS_GZ" >&2
   exit 1
-}
-# check if magma insalled - else print("MAGMA != installed")
+fi
 
-SNP_LOC=$1
-GENE_LOC=$2
-OUT_FILE=$3
-OUT_DIR=$4
+OUT_DIR="$1"
+BFILE_PREFIX="$2"
+SNP_LOC="$3"
+GENE_LOC="$4"
+TRAIT="$5"
+SUMSTATS="$6"
 
-# magma --annotate \
-  #  --snp-loc /Users/c24102394/MAGMA/ref/g1000_eur.bim \
-  #  --gene-loc /Users/c24102394/MAGMA/ref/NCBI37.3.gene.loc \
-  #  --out genes_b37
+MAGMA_BIN="${MAGMA_BIN:-/Users/c24102394/MAGMA/magma}"
 
-mkdir -p "$OUT"
+if [[ ! -x "$MAGMA_BIN" ]]; then
+  echo "ERROR: MAGMA binary not executable at: $MAGMA_BIN" >&2
+  exit 1
+fi
 
-magma --annotate \
-  --snp-loc "$SNP_LOC" \
-  --gene-loc "$GENE_LOC" \
-  --out "$OUT_DIR/$OUT_FILE"
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  MAGMA_CMD=(arch -x86_64 "$MAGMA_BIN")
+else
+  MAGMA_CMD=("$MAGMA_BIN")
+fi
 
-python3 - <<'PY'
-import gzip, math
+mkdir -p "$OUT_DIR"
+cd "$OUT_DIR"
+
+if [[ ! -f genes_b37.genes.annot ]]; then
+  "${MAGMA_CMD[@]}" --annotate --snp-loc "$SNP_LOC" --gene-loc "$GENE_LOC" --out genes_b37
+fi
+
+PV_FILE="${TRAIT}_for_magma.txt"
+
+python3 - --input "$SUMSTATS" --output "$PV_FILE" <<'PY'
+import argparse
+import gzip
 from math import erf, sqrt
 
-fin = gzip.open('/Users/c24102394/Desktop/PhD/AD_SZ_genes/LAVA_LDSC_nature/Data/AD.sumstats.gz','rt')
-fout = open('AD_for_magma.txt','w')
+def z_to_p(z: float) -> float:
+    Phi = 0.5 * (1.0 + erf(abs(z) / sqrt(2.0)))
+    return 2.0 * (1.0 - Phi)
 
-header = next(fin)  # SNP  N  Z  A1  A2
-fout.write('SNP P N\n')
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser()
+    p.add_argument("--input", required=True)
+    p.add_argument("--output", required=True)
+    return p.parse_args()
 
-for line in fin:
-    snp, N, Z, A1, A2 = line.split()
-    z = float(Z)
-    Phi = 0.5*(1.0 + erf(abs(z)/sqrt(2.0)))
-    p = 2.0*(1.0 - Phi)
-    fout.write(f"{snp} {p:.6g} {N}\n")
+def run(a: argparse.Namespace) -> None:
+    opener = gzip.open if a.input.endswith(".gz") else open
+    with opener(a.input, "rt") as fin, open(a.output, "w") as fout:
+        next(fin, None)
+        fout.write("SNP P N\n")
+        for line in fin:
+            if not line.strip():
+                continue
+            snp, n, z, *_ = line.split()
+            fout.write(f"{snp} {z_to_p(float(z)):.6g} {n}\n")
 
-fout.close()
+def main() -> None:
+    run(parse_args())
+
+if __name__ == "__main__":
+    main()
 PY
 
+"${MAGMA_CMD[@]}" --bfile "$BFILE_PREFIX" --pval "$PV_FILE" use=SNP,P ncol=N --gene-annot genes_b37.genes.annot --out "${TRAIT}_magma"
 
+MAPPED_TSV="${TRAIT}_magma.genes.mapped.tsv"
 
-# Gene analysis for trait1:
+python3 - --gene-loc "$GENE_LOC" --magma-out "${TRAIT}_magma.genes.out" --out-tsv "$MAPPED_TSV" <<'PY'
+import argparse
+import pandas as pd
 
-# gene analysis for trait2
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser()
+    p.add_argument("--gene-loc", required=True)
+    p.add_argument("--magma-out", required=True)
+    p.add_argument("--out-tsv", required=True)
+    return p.parse_args()
 
-# map gene ID to gene name from GRCh37 on both
+def run(a: argparse.Namespace) -> None:
+    gene_loc = pd.read_csv(a.gene_loc, sep=r"\s+", header=None).rename(columns={0: "GENE", 5: "GENE_ID"})
+    gene_loc["GENE"] = gene_loc["GENE"].astype(int)
+    magma = pd.read_csv(a.magma_out, sep=r"\s+", header=0)
+    magma["GENE"] = magma["GENE"].astype(int)
+    out = magma.merge(gene_loc[["GENE", "GENE_ID"]], on="GENE", how="left")
+    out.to_csv(a.out_tsv, sep="\t", index=False)
 
-# 2 MAGMA mapped sumstats (1 per trait)
+def main() -> None:
+    run(parse_args())
 
+if __name__ == "__main__":
+    main()
+PY
+
+echo "${TRAIT}_magma.genes.out"
+echo "${TRAIT}_magma.genes.mapped.tsv"
