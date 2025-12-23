@@ -12,7 +12,7 @@ process RUN_LD_CLUMPING { script: "set -euo pipefail; ${params.nfbin} ${workflow
 process RUN_COLOC { script: "set -euo pipefail; ${params.nfbin} ${workflow.launchDir}/nf/coloc.nf" }
 process RUN_FUMA_PREP { script: "ste -euo pipefail; ${params.nfbin} ${workflow.launchDir}/nf/fuma_prep.nf"}
 
-workflow {bvii
+workflow {
     RUN_QC()
     RUN_LDSC()
     RUN_LAVA()
