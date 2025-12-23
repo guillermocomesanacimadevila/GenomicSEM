@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import pandas as pd
-import numpy as np
 from pathlib import Path
 import argparse
 
@@ -49,7 +48,7 @@ def reformat_ensembl_file(df):
     ]
     return df
 
-def map_ensembl_to_symbol(df1: pd.DataFrame, ref: pd.DataFrame, df1_col: str, ensembl_col: str, symbol_col:str) -> pd.DataFrame:
+def map_ensembl_to_symbol(df1: pd.DataFrame, ref: pd.DataFrame, df1_col: str, ensembl_col: str, symbol_col: str) -> pd.DataFrame:
     df1 = df1.copy()
     ref = ref.copy()
     ref = reformat_ensembl_file(ref)
@@ -61,7 +60,7 @@ def map_ensembl_to_symbol(df1: pd.DataFrame, ref: pd.DataFrame, df1_col: str, en
 # =========
 # =========
 
-def extract_genes_pairwise(df1: pd.DataFrame, df2: pd.DataFrame, gene_col:str, pheno1_id:str, pheno2_id:str):
+def extract_genes_pairwise(df1: pd.DataFrame, df2: pd.DataFrame, gene_col: str, pheno1_id: str, pheno2_id: str):
     df1 = df1.copy()
     df2 = df2.copy()
     df1 = df1[df1[gene_col].astype(str).str.strip().str.lower() != "nan"]
@@ -74,29 +73,21 @@ def extract_genes_pairwise(df1: pd.DataFrame, df2: pd.DataFrame, gene_col:str, p
     )
     df[gene_col] = df[gene_col].replace({"FAM63B": "MINDY1"})
     df[gene_col] = df[gene_col].replace({"FAM63A": "MINDY2"})
-    print(f"Raw number of shared genes in this locus: {df[gene_col].unique()}")
+    print(f"[pairwise] shared genes ({gene_col}): {df[gene_col].nunique()}")
     return df
 
-def extract_genes_triple_overlap(
-    df1: pd.DataFrame,
-    df2: pd.DataFrame,
-    df3: pd.DataFrame,
-    gene_col,
-    pheno1_id: str,
-    pheno2_id: str,
-    pheno3_id: str,
-):
+def extract_genes_triple_overlap(df1, df2, df3, gene_col, pheno1_id, pheno2_id, pheno3_id):
     df1 = df1.copy()
     df2 = df2.copy()
     df3 = df3.copy()
 
-    def clean_gene(df: pd.DataFrame) -> pd.DataFrame:
-        m = df[gene_col].astype(str).str.strip().str.lower().ne("nan")
-        return df[m]
+    def clean(df):
+        s = df[gene_col].astype(str).str.strip()
+        return df[s.ne("") & s.str.lower().ne("nan")]
 
-    df1 = clean_gene(df1)
-    df2 = clean_gene(df2)
-    df3 = clean_gene(df3)
+    df1 = clean(df1)
+    df2 = clean(df2)
+    df3 = clean(df3)
     df12 = df1.merge(
         df2,
         on=gene_col,
@@ -104,89 +95,80 @@ def extract_genes_triple_overlap(
         suffixes=(f"_{pheno1_id}", f"_{pheno2_id}")
     )
 
-    df3_renamed = df3.rename(
-        columns={c: f"{c}_{pheno3_id}" for c in df3.columns if c != gene_col}
+    df3 = df3.rename(columns={c: f"{c}_{pheno3_id}" for c in df3.columns if c != gene_col})
+    df = df12.merge(df3, on=gene_col, how="inner")
+    df[gene_col] = df[gene_col].replace({"FAM63B": "MINDY1", "FAM63A": "MINDY2"})
+    print(df[gene_col].nunique())
+    return df
+
+def save_outputs(df, gene_col, out_prefix):
+    out_prefix.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(f"{out_prefix}_overlap.tsv", sep="\t", index=False)
+    genes = (
+        df[gene_col]
+        .astype(str)
+        .str.strip()
+        .replace({"nan": pd.NA, "": pd.NA})
+        .dropna()
+        .drop_duplicates()
+        .sort_values()
     )
+    genes.to_frame(gene_col).to_csv(f"{out_prefix}_genes.tsv", sep="\t", index=False)
 
-    df123 = df12.merge(
-        df3_renamed,
-        on=gene_col,
-        how="inner"
-    )
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument("--pheno1_id", required=True)
+    p.add_argument("--pheno2_id", required=True)
+    p.add_argument("--pheno3_id")
+    p.add_argument("--pheno1_snps", required=True)
+    p.add_argument("--pheno1_eqtl", required=True)
+    p.add_argument("--pheno1_ci", required=True)
+    p.add_argument("--pheno2_snps", required=True)
+    p.add_argument("--pheno2_eqtl", required=True)
+    p.add_argument("--pheno2_ci", required=True)
+    p.add_argument("--pheno3_snps")
+    p.add_argument("--pheno3_eqtl")
+    p.add_argument("--pheno3_ci")
+    p.add_argument("--ensembl_ref", required=True)
+    p.add_argument("--out_dir", required=True)
+    p.add_argument("--do_triple", action="store_true")
+    args = p.parse_args()
+    out = Path(args.out_dir)
+    ensembl = parse_df(args.ensembl_ref)
+    ad_snps = parse_df(args.pheno1_snps)
+    scz_snps = parse_df(args.pheno2_snps)
+    ad_eqtl = parse_df(args.pheno1_eqtl)
+    scz_eqtl = parse_df(args.pheno2_eqtl)
+    ad_ci = parse_df(args.pheno1_ci)
+    scz_ci = parse_df(args.pheno2_ci)
+    pos = extract_genes_pairwise(ad_snps, scz_snps, "nearestGene", args.pheno1_id, args.pheno2_id)
+    save_outputs(pos, "nearestGene", out / f"{args.pheno1_id}__{args.pheno2_id}_positional")
+    eqtl = extract_genes_pairwise(ad_eqtl, scz_eqtl, "symbol", args.pheno1_id, args.pheno2_id)
+    save_outputs(eqtl, "symbol", out / f"{args.pheno1_id}__{args.pheno2_id}_eqtl")
+    ad_ci = map_ensembl_to_symbol(ad_ci, ensembl, "genes", "ensembl_gene_id", "gene_symbol")
+    scz_ci = map_ensembl_to_symbol(scz_ci, ensembl, "genes", "ensembl_gene_id", "gene_symbol")
+    ci = extract_genes_pairwise(ad_ci, scz_ci, "symbol", args.pheno1_id, args.pheno2_id)
+    save_outputs(ci, "symbol", out / f"{args.pheno1_id}__{args.pheno2_id}_ci")
+    if args.do_triple:
+        lon_snps = parse_df(args.pheno3_snps)
+        lon_eqtl = parse_df(args.pheno3_eqtl)
+        lon_ci = parse_df(args.pheno3_ci)
+        pos3 = extract_genes_triple_overlap(
+            ad_snps, scz_snps, lon_snps, "nearestGene",
+            args.pheno1_id, args.pheno2_id, args.pheno3_id
+        )
+        save_outputs(pos3, "nearestGene", out / f"{args.pheno1_id}__{args.pheno2_id}__{args.pheno3_id}_positional")
+        eqtl3 = extract_genes_triple_overlap(
+            ad_eqtl, scz_eqtl, lon_eqtl, "symbol",
+            args.pheno1_id, args.pheno2_id, args.pheno3_id
+        )
+        save_outputs(eqtl3, "symbol", out / f"{args.pheno1_id}__{args.pheno2_id}__{args.pheno3_id}_eqtl")
+        lon_ci = map_ensembl_to_symbol(lon_ci, ensembl, "genes", "ensembl_gene_id", "gene_symbol")
+        ci3 = extract_genes_triple_overlap(
+            ad_ci, scz_ci, lon_ci, "symbol",
+            args.pheno1_id, args.pheno2_id, args.pheno3_id
+        )
+        save_outputs(ci3, "symbol", out / f"{args.pheno1_id}__{args.pheno2_id}__{args.pheno3_id}_ci")
 
-    df123[gene_col] = df123[gene_col].replace({"FAM63B": "MINDY1", "FAM63A": "MINDY2"})
-    print(f"Raw number of shared genes in this locus: {df123[gene_col].unique()}")
-    return df123
-
-
-
-# return dataframe and then call funct in main() -> .to_csv(sep="\t")
-# ensure cols == harmonised to each pheno
-def map_pairwise_genes_to_magma():
-    return
-
-# ensure cols == harmonised to each pheno (1-3)
-def map_triple_overlap_genes_to_magma():
-    return
-
-
-# make if statement to check whether how many traits
-# if 2 = do it for pairwise
-# if 3 = triple overlap
-def ensure_significance():
-    return
-
-
-# FRD - != avoid LD confounding
-def multiple_testing():
-    return
-
-
-
-
-
-
-
-
-PATH = Path("/Users/c24102394/Desktop/PhD/DiscoveryPipeline/outputs/fuma_post")
-ENSEMBL = parse_df("/Users/c24102394/ensemble/mart_export.txt")
-
-ad0 = parse_df(PATH / "AD/locus_0/snps.txt")
-scz0 = parse_df(PATH / "SCZ/locus_0/snps.txt")
-
-ad_eqtl = parse_df(PATH / "AD/locus_0/eqtl.txt")
-scz_eqtl = parse_df(PATH / "SCZ/locus_0/eqtl.txt")
-
-ad_ci = parse_df(PATH / "AD/locus_0/ci.txt")
-scz_ci = parse_df(PATH / "SCZ/locus_0/ci.txt")
-
-
-df = extract_genes_pairwise(ad0, scz0, "nearestGene", "AD", "SCZ")
-df2 = extract_genes_pairwise(ad_eqtl, scz_eqtl, "symbol", "AD", "SCZ")
-
-df3_ad = map_ensembl_to_symbol(ad_ci, ENSEMBL, "genes", "ensembl_gene_id", "gene_symbol")
-df3_scz = map_ensembl_to_symbol(scz_ci, ENSEMBL, "genes", "ensembl_gene_id", "gene_symbol")
-df3 = extract_genes_pairwise(df3_ad, df3_scz, "symbol", "AD", "SCZ")
-
-
-# triple overlap
-ad2 = parse_df(PATH  / "AD/locus_2/snps.txt")
-scz2 = parse_df(PATH / "SCZ/locus_2/snps.txt" )
-lon2 = parse_df(PATH / "LON/locus_0/snps.txt")
-
-ad2_eqtl = parse_df(PATH  / "AD/locus_2/eqtl.txt")
-scz2_eqtl = parse_df(PATH / "SCZ/locus_2/eqtl.txt")
-lon2_eqtl = parse_df(PATH / "LON/locus_0/eqtl.txt")
-
-ad2_ci = parse_df(PATH  / "AD/locus_2/ci.txt")
-scz2_ci = parse_df(PATH / "SCZ/locus_2/ci.txt")
-lon2_ci = parse_df(PATH / "LON/locus_0/ci.txt")
-
-triple_ci_ad = map_ensembl_to_symbol(ad2_ci, ENSEMBL, "genes", "ensembl_gene_id", "gene_symbol")
-triple_ci_scz = map_ensembl_to_symbol(scz2_ci, ENSEMBL, "genes", "ensembl_gene_id", "gene_symbol")
-triple_ci_lon = map_ensembl_to_symbol(lon2_ci, ENSEMBL, "genes", "ensembl_gene_id", "gene_symbol")
-
-triple = extract_genes_triple_overlap(ad2, scz2, lon2, "nearestGene", "AD", "SCZ", "LON")
-triple_eqtl = extract_genes_triple_overlap(ad2_eqtl, scz2_eqtl, lon2_eqtl, "symbol", "AD", "SCZ", "LON")
-triple_ci = extract_genes_triple_overlap(triple_ci_ad, triple_ci_scz, triple_ci_lon, "symbol", "AD", "SCZ", "LON")
-
+if __name__ == "__main__":
+    main()
