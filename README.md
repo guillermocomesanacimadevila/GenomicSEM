@@ -9,8 +9,9 @@
 
 ---
 
-**Citation:**  
-Comesaña Cimadevila G. et al. AD–SCZ CrossGen: Multi-layer discovery pipeline for shared genetic architecture. GitHub.
+**Comesaña Cimadevila G**, *et al.*  
+**AD–SCZ CrossGen**: a multi-layer discovery pipeline for shared genetic architecture.  
+*GitHub repository*: https://github.com/guillermocomesanacimadevila/AD-SCZ-CrossGEN
 
 ---
 
