@@ -101,5 +101,25 @@ Rscript mr-pipeline.R \
 ```
 
 
+## Run Mappings! 
+
+```bash
+python map.py \
+  --pheno1_id AD \
+  --pheno2_id SCZ \
+  --pheno3_id LON \
+  --pheno1_snps /Users/c24102394/Desktop/PhD/DiscoveryPipeline/outputs/fuma_post/AD/locus_2/snps.txt \
+  --pheno1_eqtl /Users/c24102394/Desktop/PhD/DiscoveryPipeline/outputs/fuma_post/AD/locus_2/eqtl.txt \
+  --pheno1_ci /Users/c24102394/Desktop/PhD/DiscoveryPipeline/outputs/fuma_post/AD/locus_2/ci.txt \
+  --pheno2_snps /Users/c24102394/Desktop/PhD/DiscoveryPipeline/outputs/fuma_post/SCZ/locus_2/snps.txt \
+  --pheno2_eqtl /Users/c24102394/Desktop/PhD/DiscoveryPipeline/outputs/fuma_post/SCZ/locus_2/eqtl.txt \
+  --pheno2_ci /Users/c24102394/Desktop/PhD/DiscoveryPipeline/outputs/fuma_post/SCZ/locus_2/ci.txt \
+  --pheno3_snps /Users/c24102394/Desktop/PhD/DiscoveryPipeline/outputs/fuma_post/LON/locus_0/snps.txt \
+  --pheno3_eqtl /Users/c24102394/Desktop/PhD/DiscoveryPipeline/outputs/fuma_post/LON/locus_0/eqtl.txt \
+  --pheno3_ci /Users/c24102394/Desktop/PhD/DiscoveryPipeline/outputs/fuma_post/LON/locus_0/ci.txt \
+  --ensembl_ref /Users/c24102394/ensemble/mart_export.txt \
+  --out_dir /Users/c24102394/Desktop/PhD/DiscoveryPipeline/outputs/gene-mappings/locus_2 \
+  --do_triple
+```
 
 
