@@ -1,11 +1,16 @@
 # Untangling Shared Genetic Components (AD -> SCZ)
 
-> *Multi-layer, cross-trait discovery pipeline*
+> Multi-layer, cross-trait discovery pipeline
 
 ---
 
 **Authors:**  
-Guillermo Comesaña Cimadevila · Emily Simmonds · Dervis Salih · Nicholas Bray · Valentina Escott-Price 
+> *Guillermo Comesaña Cimadevila · Emily Simmonds · Dervis Salih · Nicholas Bray · Valentina Escott-Price*
+
+---
+
+**Citation:**  
+Comesaña Cimadevila G. et al. AD–SCZ CrossGen: Multi-layer discovery pipeline for shared genetic architecture. GitHub.
 
 ---
 
