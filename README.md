@@ -12,7 +12,7 @@ Guillermo Comesaña Cimadevila · Emily Simmonds · Dervis Salih · Nicholas Bra
 [![Status](https://img.shields.io/badge/status-active-success.svg)]()
 [![CI](https://img.shields.io/badge/CI-nextflow%20ready-blueviolet.svg)]()
 [![Workflow](https://img.shields.io/badge/workflow-Nextflow-0DC09D.svg)]()
-[![Containers](https://img.shields.io/badge/containers-Docker%20%7C%20Singularity-2496ED.svg)]()
+[![Containers](https://img.shields.io/badge/containers-Docker.svg)]()
 [![Languages](https://img.shields.io/badge/languages-R%20%7C%20Python%20%7C%20Bash-276DC3.svg)]()
 [![R](https://img.shields.io/badge/R-%E2%89%A54.2-276DC3.svg)]()
 [![Python](https://img.shields.io/badge/python-%E2%89%A53.11-3776AB.svg)]()
