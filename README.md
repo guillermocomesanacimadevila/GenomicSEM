@@ -27,6 +27,17 @@
 
 ---
 
+## Required reference files 
+
+- HapMap3
+- 1,000 Genomes (bim/bed/fam)
+- UKBB LD coordinates
+- uk_lava_ref.gz files
+- Ensembl maps (gene ID -> gene name)
+- GTEx v10 brain cis-eQTLs
+- MAGMA reference files
+  
+---
 
 ## Manhattan plotting! 
 
