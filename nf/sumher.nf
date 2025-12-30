@@ -132,6 +132,7 @@ process CALC_RG {
 
     output:
     path "${pheno1}-${pheno2}.*", emit: rg_all
+    path "res/*", emit: rg_res
 
     publishDir "${workflow.launchDir}/outputs/sumher/rg/${pheno1}-${pheno2}", mode: 'copy'
 
@@ -140,15 +141,24 @@ process CALC_RG {
     set -euo pipefail
 
     TAG="${workflow.launchDir}/outputs/sumher/tagging/eur_humdef.tagging"
+    mkdir -p res
 
     ${params.ldak} \\
       --sum-cors "${pheno1}-${pheno2}" \\
-      --summary  "${workflow.launchDir}/outputs/sumher/${pheno1}/${pheno1}.ldak.summaries" \\
+      --summary "${workflow.launchDir}/outputs/sumher/${pheno1}/${pheno1}.ldak.summaries" \\
       --summary2 "${workflow.launchDir}/outputs/sumher/${pheno2}/${pheno2}.ldak.summaries" \\
-      --tagfile  "\$TAG" \\
+      --tagfile "\$TAG" \\
       --cutoff ${params.thresh} \\
       --check-sums NO \\
       > "${pheno1}-${pheno2}.log" 2>&1
+
+    ${params.pybin} ${workflow.launchDir}/src/sumher/calc_p.py \\
+        --pheno1_prefix ${pheno1} \\
+        --pheno2_prefix ${pheno2} \\
+        --rg_column_name Value \\
+        --se_column_name SE \\
+        --results "${pheno1}-${pheno2}.cors" \\
+        --out_dir res
 
     cp .command.* ${workflow.launchDir}/logs/SumHer/ || true
     """
