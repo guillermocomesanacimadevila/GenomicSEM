@@ -1,6 +1,10 @@
 #!/usr/bin/env nextflow
 nextflow.enable.dsl=2
 
+// ====================================== // 
+// (BARE IN MIND -> ONLY 1,000 GENOMES)   //
+// ====================================== //    
+
 // baseline params 
 // nextflow run sumher.nf --do_tagging false
 // nextflow run sumher.nf --do_tagging true
